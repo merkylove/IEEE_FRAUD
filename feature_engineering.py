@@ -229,7 +229,8 @@ def V_features_to_PCA(df):
 
     pca_df = pd.DataFrame(
         data=transformed_values,
-        columns=[f'PCA_V{i}' for i in range(size)]
+        columns=[f'PCA_V{i}' for i in range(size)],
+        index=df.index
     )
 
     df.drop(labels=V_features, axis=1, inplace=True)
