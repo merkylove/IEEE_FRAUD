@@ -2,6 +2,8 @@ import numpy as np
 import datetime
 
 from sklearn import preprocessing
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 from settings import START_DATE
 
@@ -206,5 +208,26 @@ def process_id_30(df):
 
     df['OS_V_COMBINED'] = df['OS_V0'] * 1000 + df['OS_V1'] * 10 + df['OS_V2'].fillna(0)
     df['OS_V_COMBINED'] = df['OS_V_COMBINED'].astype(float)
+
+    return df
+
+
+def V_features_to_PCA(df):
+
+    pca_reducer = PCA(n_components=0.85)
+
+    V_features = [f'V{i}' for i in range(1, 340)]
+
+    transformed_values = pca_reducer.fit_transform(
+        StandardScaler().fit_transform(
+            df[V_features].fillna(0.0)
+        )
+    )
+
+    size = transformed_values.shape[1]
+
+    df[[f'PCA_V{i}' for i in range(size)]] = transformed_values
+
+    df.drop(labels=V_features, axis=1, inplace=True)
 
     return df

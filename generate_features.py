@@ -3,7 +3,7 @@ import numpy as np
 
 from feature_engineering import add_datetime_features, process_id_30, \
     process_id_33, emaildomain_features, count_features, smoothed_encodings, \
-    encode_categorical_features
+    encode_categorical_features, V_features_to_PCA
 from settings import CATEGORICAL_FEATURES, TARGET
 
 
@@ -102,6 +102,8 @@ def generate_features(train, test, mode='train'):
             ],
             val
         )
+
+    train_test_joined = V_features_to_PCA(train_test_joined)
 
     train_test_joined, encoders = encode_categorical_features(
         train_test_joined,
