@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np
+import datetime
 
 from feature_engineering import add_datetime_features, process_id_30, \
     process_id_33, emaildomain_features, count_features, smoothed_encodings, \
@@ -19,12 +19,19 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16)):
 
     train_size = train.shape[0]
     test_size = test.shape[0]
+
+    print('Starting', datetime.datetime.now())
+
     train_test_joined = pd.concat([train, test], sort=True)
+    print('Concatted', datetime.datetime.now())
 
     train_test_joined = add_datetime_features(train_test_joined)
+    print('DT FEATURES', datetime.datetime.now())
     train_test_joined = process_id_30(train_test_joined)
     train_test_joined = process_id_33(train_test_joined)
     train_test_joined = emaildomain_features(train_test_joined)
+    print('ids, emaildomain', datetime.datetime.now())
+
     train_test_joined = count_features(
         train_test_joined,
         columns_agg=[
@@ -49,6 +56,7 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16)):
             ['ProductCD']
         ]
     )
+    print('Count features', datetime.datetime.now())
 
     # target encoding
     train_test_joined = smoothed_encodings(
@@ -78,6 +86,7 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16)):
         funcs=['mean'],
         train_size=sum(train_test_joined['TransactionDT_split'].isin(bounds))
     )
+    print('target encoding', datetime.datetime.now())
 
     # mean, std encodings
     for val in ['TransactionAmt', 'id_02']:
@@ -107,6 +116,7 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16)):
             ],
             val
         )
+    print('Mean Encoding', datetime.datetime.now())
 
     #train_test_joined = V_features_to_PCA(train_test_joined)
 
@@ -114,5 +124,6 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16)):
         train_test_joined,
         CATEGORICAL_FEATURES
     )
+    print('Encoders', datetime.datetime.now())
 
     return train_test_joined
