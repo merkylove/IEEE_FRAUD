@@ -3,19 +3,19 @@ import pandas as pd
 
 def read_data():
     train_transaction = pd.read_csv(
-        'train_transaction.csv',
+        '../train_transaction.csv',
         index_col='TransactionID'
     )
     train_identity = pd.read_csv(
-        'train_identity.csv',
+        '../train_identity.csv',
         index_col='TransactionID'
     )
     test_transaction = pd.read_csv(
-        'test_transaction.csv',
+        '../test_transaction.csv',
         index_col='TransactionID'
     )
     test_identity = pd.read_csv(
-        'test_identity.csv',
+        '../test_identity.csv',
         index_col='TransactionID'
     )
     sample_submission = pd.read_csv('sample_submission.csv')
