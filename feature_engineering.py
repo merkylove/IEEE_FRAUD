@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import datetime
 
 from sklearn import preprocessing
@@ -226,8 +227,13 @@ def V_features_to_PCA(df):
 
     size = transformed_values.shape[1]
 
-    df[[f'PCA_V{i}' for i in range(size)]] = transformed_values
+    pca_df = pd.DataFrame(
+        data=transformed_values,
+        columns=[f'PCA_V{i}' for i in range(size)]
+    )
 
     df.drop(labels=V_features, axis=1, inplace=True)
+
+    df = pd.concat([df, pca_df], axis=1)
 
     return df
