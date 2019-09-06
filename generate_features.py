@@ -21,7 +21,7 @@ def generate_features(train, test, mode='train'):
 
     train_size = train.shape[0]
     test_size = test.shape[0]
-    train_test_joined = pd.concat([train, test])
+    train_test_joined = pd.concat([train, test], sort=True)
 
     train_test_joined = add_datetime_features(train_test_joined)
     train_test_joined = process_id_30(train_test_joined)

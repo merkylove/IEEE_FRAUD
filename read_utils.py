@@ -18,7 +18,7 @@ def read_data():
         '../test_identity.csv',
         index_col='TransactionID'
     )
-    sample_submission = pd.read_csv('sample_submission.csv')
+    sample_submission = pd.read_csv('../sample_submission.csv')
 
     train = pd.merge(
         train_transaction,

@@ -9,7 +9,7 @@ from settings import START_DATE
 def calc_smooth_mean(
         df,
         columns_agg,
-        funcs=['mean', 'std', np.median],
+        funcs=['mean', 'std', np.nanmedian],
         on='isFraud',
         m=10,
         to_round=3
@@ -17,7 +17,12 @@ def calc_smooth_mean(
 
     to_smooth = {}
     for f in funcs:
-        to_smooth[f] = df[on].agg(f)
+
+        f_name = f
+        if not isinstance(f, str):
+            f_name = f.__name__
+
+        to_smooth[f_name] = df[on].agg(f_name)
 
     agg = df.groupby(columns_agg)[on].agg(['count'] + funcs)
     counts = agg['count']
@@ -26,8 +31,12 @@ def calc_smooth_mean(
 
     for f in funcs:
 
-        values = agg[f]
-        smooth = (counts * values + m * to_smooth[f]) / (counts + m)
+        f_name = f
+        if not isinstance(f, str):
+            f_name = f.__name__
+
+        values = agg[f_name]
+        smooth = (counts * values + m * to_smooth[f_name]) / (counts + m)
 
         smooth = smooth.to_dict()
         smooth_fixed = {}
@@ -35,7 +44,7 @@ def calc_smooth_mean(
             k_fixed = [k] if not isinstance(k, tuple) else k
             smooth_fixed['_'.join(map(str, k_fixed))] = np.round(smooth[k], to_round)
 
-        value_mappings[f] = smooth_fixed
+        value_mappings[f_name] = smooth_fixed
 
     return value_mappings
 
@@ -44,7 +53,7 @@ def smoothed_encodings(
         df,
         columns_agg,
         column_value,
-        funcs=['mean', 'std', np.median],
+        funcs=['mean', 'std', np.nanmedian],
         train_size=None
 ):
     if train_size is None:
@@ -60,15 +69,19 @@ def smoothed_encodings(
 
         for f in funcs:
 
+            f_name = f
+            if not isinstance(f, str):
+                f_name = f.__name__
+
             col_name = '_'.join(col_agg)
-            col_name = f'smoothed_encoded_{col_name}_on_{column_value}_{f}'
+            col_name = f'smoothed_encoded_{col_name}_on_{column_value}_{f_name}'
 
             df[col_name] = df[col_agg[0]].astype(str)
             for i in col_agg[1:]:
                 df[col_name] += '_'
                 df[col_name] += df[i].astype(str)
 
-            df[col_name] = df[col_name].map(encoders[f])
+            df[col_name] = df[col_name].map(encoders[f_name])
 
     return df
 
@@ -123,13 +136,7 @@ def add_datetime_features(df):
     df[f'{tr_dt}_split'] = (df[f'{tr_dt}_to_datetime'].dt.year - 2017) * 12 + \
                                 df[f'{tr_dt}_to_datetime'].dt.month
 
-    del df[
-        [
-            f'{tr_dt}_year',
-            f'{tr_dt}_to_datetime',
-            f'{tr_dt}_month'
-        ]
-    ]
+    df.drop(labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'], axis=1, inplace=True)
 
     return df
 
