@@ -15,7 +15,7 @@ def calc_smooth_mean(
         funcs=['mean', 'std', np.nanmedian],
         on='isFraud',
         m=10,
-        to_round=3
+        to_round=5
 ):
 
     to_smooth = {}
@@ -115,6 +115,7 @@ def emaildomain_features(df):
         df[i] = df[i].astype(str)
 
     df['R=P'] = df['P_emaildomain'] == df['R_emaildomain']
+    df['R1=P1'] = df['P_emaildomain_1'] == df['R_emaildomain_1']
 
     return df
 
@@ -134,12 +135,16 @@ def add_datetime_features(df):
         lambda x: x.weekday())
     df[f'{tr_dt}_weekOfMonth'] = (df[f'{tr_dt}_to_datetime'].dt.day - 1) // 7 + 1
     df[f'{tr_dt}_hour'] = df[f'{tr_dt}_to_datetime'].dt.hour
-    df[f'{tr_dt}_minute'] = df[f'{tr_dt}_to_datetime'].dt.minute
-    df[f'{tr_dt}_second'] = df[f'{tr_dt}_to_datetime'].dt.second
+    #df[f'{tr_dt}_minute'] = df[f'{tr_dt}_to_datetime'].dt.minute
+    #df[f'{tr_dt}_second'] = df[f'{tr_dt}_to_datetime'].dt.second
     df[f'{tr_dt}_split'] = (df[f'{tr_dt}_to_datetime'].dt.year - 2017) * 12 + \
                                 df[f'{tr_dt}_to_datetime'].dt.month
 
-    df.drop(labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'], axis=1, inplace=True)
+    df.drop(
+        labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'],
+        axis=1,
+        inplace=True
+    )
 
     return df
 
