@@ -14,7 +14,7 @@ def calc_smooth_mean(
         columns_agg,
         funcs=['mean', 'std', np.nanmedian],
         on='isFraud',
-        m=10,
+        m=100,
         to_round=5
 ):
 
