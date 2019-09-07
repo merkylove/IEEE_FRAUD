@@ -40,8 +40,24 @@ CATEGORICAL_FEATURES = [
     'P_emaildomain_3',
     'R_emaildomain_1',
     'R_emaildomain_2',
-    'R_emaildomain_3'
-] + [f'id_{i}' for i in range(12, 39)]
+    'R_emaildomain_3',
+    #
+    'id_12',
+    'id_15',
+    'id_16',
+    'id_23',
+    'id_27',
+    'id_28',
+    'id_29',
+    'id_30',
+    'id_31',
+    'id_33',
+    'id_34',
+    'id_35',
+    'id_36',
+    'id_37',
+    'id_38'
+]# + [f'id_{i}' for i in range(12, 39)]
 
 
 COLUMNS_TO_REMOVE = [
