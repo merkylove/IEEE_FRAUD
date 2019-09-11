@@ -121,8 +121,8 @@ def count_features(
 
         col_name = '_'.join(c_agg)
 
-        df[f'{col_name}_count'] = df[c_agg]\
-            .groupby(c_agg)[c_agg[0]]\
+        df[f'{col_name}_count'] = df[c_agg + ['TransactionDT']]\
+            .groupby(c_agg)['TransactionDT']\
             .transform('count')
 
         if with_typical_for_user and len(c_agg) > 1:
@@ -144,6 +144,17 @@ def emaildomain_features(df):
 
     df['R=P'] = df['P_emaildomain'] == df['R_emaildomain']
     df['R1=P1'] = df['P_emaildomain_1'] == df['R_emaildomain_1']
+
+    return df
+
+
+def base_transaction_delta_features(df):
+    df['time_from_prev_transaction'] = df \
+        .groupby('card1')['TransactionDT'] \
+        .diff()
+    df['time_to_next_transaction'] = df \
+        .groupby('card1')['time_from_prev_transaction'] \
+        .shift(-1)
 
     return df
 
@@ -183,6 +194,31 @@ def add_datetime_features(df):
         .isin(us_holidays)\
         .astype(np.int8)
 
+    df['mean_time_between_transactions'] = df\
+        .groupby('card1')['time_from_prev_transaction'] \
+        .transform('mean')
+    df['median_time_between_transactions'] = df \
+        .groupby('card1')['time_from_prev_transaction'] \
+        .transform(np.nanmedian)
+
+    df['time_from_prev_transaction_ratio_to_mean'] = \
+        df['time_from_prev_transaction'] / df['mean_time_between_transactions']
+
+    df['time_from_prev_transaction_ratio_to_median'] = \
+        df['time_from_prev_transaction'] / df['median_time_between_transactions']
+
+    df['time_to_next_transaction_ratio_to_mean'] = \
+        df['time_to_next_transaction'] / df['mean_time_between_transactions']
+
+    df['time_to_next_transaction_ratio_to_median'] = \
+        df['time_to_next_transaction'] / df[
+            'median_time_between_transactions']
+
+    df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
+    df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
+        .groupby('card1')['TransactionDT']\
+        .transform('count')
+
     df.drop(
         labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'],
         axis=1,
@@ -198,8 +234,7 @@ def encode_categorical_features(df, cat_features):
     for f in cat_features:
         le = preprocessing.LabelEncoder()
 
-        if df[f].dtype in ('float64', 'object'):
-            df[f] = df[f].astype(str)
+        df[f] = df[f].astype(str)
 
         df[f] = le.fit_transform(df[f].fillna('FILL_NAN'))
         encoders[f] = le
@@ -263,13 +298,13 @@ def process_id_30(df):
     return df
 
 
-def features_to_PCA(df, columns, prefix, n_components=0.95):
+def features_to_PCA(df, columns, prefix, n_components=0.99):
 
     pca_reducer = PCA(n_components=n_components)
 
     transformed_values = pca_reducer.fit_transform(
         StandardScaler().fit_transform(
-            df[columns].fillna(0.0)
+            df[columns].fillna(-0.5)
         )
     )
 
@@ -311,3 +346,154 @@ def log_features(df, colums):
 
 def C_log_features(df):
     return log_features(df, [f'C{i}' for i in range(1, 15)])
+
+
+def add_is_null_features(
+        df,
+        columns=(
+            'addr1',
+            'addr2',
+            'dist1',
+            'dist2',
+            'D1',
+            'D2',
+            'D3',
+            'D5',
+            'D6',
+            'D7',
+            'D8',
+            'D9',
+            'D10',
+            'D11',
+            'D12',
+            'D13',
+            'D14',
+            'D15',
+            'M1',  # == M2=3
+            'M4',
+            'M6',
+            'M7',  # == M8-9
+            'V1',  # == V1-11
+            'V12',  # == V12-34
+            'V35',  # V35-52
+            'V53',  # V53-74
+            'V75',  # V75-94
+            'V95',  # V95-137
+            'V138',  # V138-166
+            'V167',
+            'V322',
+            'id_01',
+            'id_02',
+            'id_03',
+            'id_04',
+            'id_05',
+            'id_06',
+            'id_07',
+            'id_08',
+            'id_09',
+            'id_10',
+            'id_11',
+            'id_12',
+            'id_13',
+            'id_14',
+            'id_15',
+            'id_16',
+            'id_17',
+            'id_18',
+            'id_19',
+            'id_20',
+            'id_21',
+            'id_22',
+            'id_23',
+            'id_24',
+            'id_25',
+            'id_26',
+            'id_27',
+            'id_28',
+            'id_29',
+            'id_30',
+            'id_31',
+            'id_32',
+            'id_33',
+            'id_34',
+            'id_35',
+            'id_36',
+            'id_37',
+            'id_38',
+            'DeviceType',
+            'DeviceInfo'
+        )
+):
+
+    for column in columns:
+        df[f'{column}_isnull'] = df[column].isnull()
+
+    return df
+
+
+def device_to_group(df):
+    df['DeviceInfo'] = df['DeviceInfo'].fillna('unknown_device').str.lower()
+
+    df['device_name'] = df['DeviceInfo'].str.split('/', expand=True)[0]
+
+    df.loc[df['device_name'].str.contains('SM',
+                                          na=False), 'device_name'] = 'Samsung'
+    df.loc[df['device_name'].str.contains('SAMSUNG',
+                                          na=False), 'device_name'] = 'Samsung'
+    df.loc[df['device_name'].str.contains('GT-',
+                                          na=False), 'device_name'] = 'Samsung'
+    df.loc[df['device_name'].str.contains('Moto G',
+                                          na=False), 'device_name'] = 'Motorola'
+    df.loc[df['device_name'].str.contains('Moto',
+                                          na=False), 'device_name'] = 'Motorola'
+    df.loc[df['device_name'].str.contains('moto',
+                                          na=False), 'device_name'] = 'Motorola'
+    df.loc[
+        df['device_name'].str.contains('LG-', na=False), 'device_name'] = 'LG'
+    df.loc[
+        df['device_name'].str.contains('rv:', na=False), 'device_name'] = 'RV'
+    df.loc[df['device_name'].str.contains('HUAWEI',
+                                          na=False), 'device_name'] = 'Huawei'
+    df.loc[df['device_name'].str.contains('ALE-',
+                                          na=False), 'device_name'] = 'Huawei'
+    df.loc[df['device_name'].str.contains('-L',
+                                          na=False), 'device_name'] = 'Huawei'
+    df.loc[df['device_name'].str.contains('Blade',
+                                          na=False), 'device_name'] = 'ZTE'
+    df.loc[df['device_name'].str.contains('BLADE',
+                                          na=False), 'device_name'] = 'ZTE'
+    df.loc[df['device_name'].str.contains('Linux',
+                                          na=False), 'device_name'] = 'Linux'
+    df.loc[
+        df['device_name'].str.contains('XT', na=False), 'device_name'] = 'Sony'
+    df.loc[
+        df['device_name'].str.contains('HTC', na=False), 'device_name'] = 'HTC'
+    df.loc[df['device_name'].str.contains('ASUS',
+                                          na=False), 'device_name'] = 'Asus'
+
+    df.loc[df.device_name.isin(df.device_name.value_counts()[
+                                   df.device_name.value_counts() < 200].index), 'device_name'] = "Others"
+
+    return df
+
+
+def remove_rare_values(df, train_size, columns):
+    for column in columns:
+
+        valid_values = df[:train_size][column].value_counts()
+        valid_values = valid_values[valid_values > 2]
+        valid_values = set(valid_values.index)
+
+        df[column] = np.where(
+            df[column].isin(df[:train_size][column]),
+            df[column],
+            np.nan
+        )
+
+        df[column] = np.where(
+            df[column].isin(valid_values),
+            df[column],
+            np.nan
+        )
+
+        return df
