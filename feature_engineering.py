@@ -214,16 +214,52 @@ def add_datetime_features(df):
         df['time_to_next_transaction'] / df[
             'median_time_between_transactions']
 
-    df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
-    df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
-        .groupby('card1')['TransactionDT']\
-        .transform('count')
+    df.reset_index(inplace=True)
+    df.set_index('TransactionDT_to_datetime', inplace=True)
 
-    df.drop(
-        labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'],
-        axis=1,
-        inplace=True
-    )
+    for interval in ['1min', '1h', '1d']:
+        df[f'TransactionAmt_count_within_{interval}'] = df\
+            .groupby('card1')['TransactionAmt']\
+            .rolling(interval)\
+            .count()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
+
+        df[f'TransactionAmt_sum_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .sum()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
+
+        df[f'TransactionAmt_mean_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .mean()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
+
+        df[f'TransactionAmt_std_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .std()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
+
+    # df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
+    # df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
+    #     .groupby('card1')['TransactionDT']\
+    #     .transform('count')
+
+    # df.drop(
+    #     labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'],
+    #     axis=1,
+    #     inplace=True
+    # )
 
     return df
 
@@ -373,15 +409,6 @@ def add_is_null_features(
             'M4',
             'M6',
             'M7',  # == M8-9
-            'V1',  # == V1-11
-            'V12',  # == V12-34
-            'V35',  # V35-52
-            'V53',  # V53-74
-            'V75',  # V75-94
-            'V95',  # V95-137
-            'V138',  # V138-166
-            'V167',
-            'V322',
             'id_01',
             'id_02',
             'id_03',
@@ -496,4 +523,40 @@ def remove_rare_values(df, train_size, columns):
             np.nan
         )
 
-        return df
+    return df
+
+
+def V_groups_to_nan(df):
+    for k, v in V_GROUPS_BY_NOTNULL.items():
+        df[f'{k}_notnull'] = df[{v[0]}].notnull()
+
+    return df
+
+
+def advanced_V_processing(df):
+
+    df['V126-137_mean_with_zeros'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
+    df['V126-137_std'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
+
+    df['V306-321_mean_with_zeros'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
+    df['V306-321_std'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
+
+    df[f'V126-137_mean'] = \
+        df[[f'V{i}' for i in range(126, 138)]].sum(axis=1) / \
+        (df[[f'V{i}' for i in range(126, 138)]] > 0).sum(axis=1)
+
+    df[f'V306-321_mean'] = \
+        df[[f'V{i}' for i in range(306, 322)]].sum(axis=1) / \
+        (df[[f'V{i}' for i in range(306, 322)]] > 0).sum(axis=1)
+
+    df[[f'V{i}_diff' for i in range(279, 306)]] = df[[f'V{i}' for i in range(279, 306)]].diff()
+
+    for min_i, max_i in [
+        (126, 137), (306, 321)
+    ]:
+        for i in range(min_i, max_i + 1):
+            df[f'V{i}_card1_mean'] = df\
+                .groupby('card1')[f'V{i}']\
+                .transform('mean')
+
+    return df
