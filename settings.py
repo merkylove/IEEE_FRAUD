@@ -54,6 +54,9 @@ COLUMNS_TO_REMOVE = [
     'TransactionDT',
     TARGET,
     'TransactionDT_split',
+    'TransactionDT_year',
+    'TransactionDT_to_datetime',
+    'TransactionDT_month'
 ]
 
 
@@ -65,11 +68,13 @@ V_GROUPS_BY_NOTNULL = {
         (35, 52),
         (53, 74),
         (75, 94),
-        (95, 137),
+        (95, 125),
+        (126, 137),
         (138, 166),
         (167, 216),
         (217, 278),
-        (279, 321),
+        (279, 305),
+        (306, 321),
         (322, 339)
     ]
 }

@@ -6,7 +6,8 @@ from feature_engineering import add_datetime_features, process_id_30, \
     process_id_33, emaildomain_features, count_features, smoothed_encodings, \
     encode_categorical_features, V_features_to_PCA, D_features_to_PCA, \
     C_features_to_PCA, exchange_rate_took_place_feature, add_is_null_features, \
-    device_to_group, remove_rare_values, base_transaction_delta_features
+    device_to_group, remove_rare_values, base_transaction_delta_features, \
+    V_groups_to_nan, advanced_V_processing
 from settings import CATEGORICAL_FEATURES, TARGET
 
 
@@ -29,6 +30,8 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
 
     train = base_transaction_delta_features(train)
     test = base_transaction_delta_features(test)
+    train = advanced_V_processing(train)
+    test = advanced_V_processing(test)
 
     train_test_joined = pd.concat([train, test], sort=True)
     print('Concatted', datetime.datetime.now())
@@ -44,6 +47,7 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     train_test_joined = emaildomain_features(train_test_joined)
     train_test_joined = add_is_null_features(train_test_joined)
     train_test_joined = device_to_group(train_test_joined)
+    train_test_joined = V_groups_to_nan(train_test_joined)
     #train_test_joined = generate_uid_features(train_test_joined)
     print('ids, emaildomain', datetime.datetime.now())
 
@@ -259,11 +263,11 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     #train_test_joined = D_features_to_PCA(train_test_joined)
     #train_test_joined = C_features_to_PCA(train_test_joined)
 
-    train_test_joined = remove_rare_values(
-        train_test_joined,
-        train.shape[0],
-        ['card1']
-    )
+    # train_test_joined = remove_rare_values(
+    #     train_test_joined,
+    #     train.shape[0],
+    #     ['card1']
+    # )
 
     train_test_joined, encoders = encode_categorical_features(
         train_test_joined,
@@ -271,4 +275,4 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     )
     print('Encoders', datetime.datetime.now())
 
-    return train_test_joined
+    return train_test_joined, encoders
