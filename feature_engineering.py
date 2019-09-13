@@ -27,6 +27,10 @@ def exchange_rate_took_place_feature(df):
         .str\
         .split('.', expand=True)[1]\
         .apply(lambda x: len(x) > 2)
+
+    df['cents'] = np.round(df['TransactionAmt'] - df['TransactionAmt'].astype(int), 3)
+    df['cents_categorical'] = df['cents'].astype(str)
+
     return df
 
 
@@ -115,7 +119,10 @@ def smoothed_encodings(
 def count_features(
         df,
         columns_agg,
-        with_typical_for_user=True
+        with_typical_for_user=True,
+        remove_rare=False,
+        threshold_rare=50,
+        fill_value=-9999
 ):
     for c_agg in columns_agg:
 
@@ -128,6 +135,49 @@ def count_features(
         if with_typical_for_user and len(c_agg) > 1:
             df[f'{col_name}_count_how_typical'] = df[f'{col_name}_count'] / \
                 df.groupby(['card1'])['TransactionDT'].transform('count')
+
+        # we remove only single features
+        if remove_rare and len(c_agg) == 1:
+            df[f'{col_name}_removed_rare'] = df[col_name].copy()
+            df[
+                df[f'{col_name}_count'] < threshold_rare
+            ][f'{col_name}_removed_rare'] = fill_value
+
+    return df
+
+
+def extract_registration_date(df):
+    tr_dt = 'TransactionDT'
+
+    df[f'{tr_dt}_to_datetime'] = df[tr_dt].apply(
+        lambda x: START_DATE + datetime.timedelta(seconds=x)
+    )
+
+    df['card_registered_delta_tmp'] = pd.to_timedelta(df['D1'], unit='day')
+    df['subcard_reg_date'] = (
+            df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp']
+    )
+    df['subcard_reg_timestamp'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .apply(
+        lambda x: (
+                x - datetime.date(1970, 1, 1)
+        ).total_seconds()
+    )
+    df['subcard_categorical'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .astype(str)
+
+    df.drop(
+        labels=[
+            'card_registered_delta_tmp',
+            'subcard_reg_date'
+        ],
+        axis=1,
+        inplace=True
+    )
 
     return df
 
@@ -148,13 +198,26 @@ def emaildomain_features(df):
     return df
 
 
-def base_transaction_delta_features(df):
-    df['time_from_prev_transaction'] = df \
-        .groupby('card1')['TransactionDT'] \
-        .diff()
-    df['time_to_next_transaction'] = df \
-        .groupby('card1')['time_from_prev_transaction'] \
-        .shift(-1)
+def base_transaction_delta_features(
+        df,
+        column_aggs=[
+            ['card1'],
+            ['card1', 'ProductCD'],
+            ['card1', 'ProductCD', 'addr1'],
+            ['card1', 'subcard_categorical'],
+        ]
+):
+
+    for c_agg in column_aggs:
+
+        col_name = '_'.join(c_agg)
+
+        df[f'time_from_prev_transaction_by_{col_name}'] = df \
+            .groupby(c_agg)['TransactionDT'] \
+            .diff()
+        df[f'time_to_next_transaction_by_{col_name}'] = df \
+            .groupby(c_agg)[f'time_from_prev_transaction_by_{col_name}'] \
+            .shift(-1)
 
     return df
 
@@ -163,23 +226,18 @@ def add_datetime_features(df):
 
     tr_dt = 'TransactionDT'
 
-    df[f'{tr_dt}_to_datetime'] = df[tr_dt].apply(
-        lambda x: START_DATE + datetime.timedelta(seconds=x)
-    )
-
     df[f'{tr_dt}_year'] = df[f'{tr_dt}_to_datetime'].dt.year - 2017
     df[f'{tr_dt}_month'] = df[f'{tr_dt}_to_datetime'].dt.month
     df[f'{tr_dt}_dayOfMonth'] = df[f'{tr_dt}_to_datetime'].dt.day
-    df[f'{tr_dt}_dayOfWeek'] = df[f'{tr_dt}_to_datetime'].apply(
-        lambda x: x.weekday()
-    )
+    # df[f'{tr_dt}_dayOfWeek'] = df[f'{tr_dt}_to_datetime'].apply(
+    #     lambda x: x.weekday()
+    # )
     df[f'{tr_dt}_weekOfMonth'] = (df[f'{tr_dt}_to_datetime'].dt.day - 1) // 7 + 1
     df[f'{tr_dt}_hour'] = df[f'{tr_dt}_to_datetime'].dt.hour
     #df[f'{tr_dt}_minute'] = df[f'{tr_dt}_to_datetime'].dt.minute
     #df[f'{tr_dt}_second'] = df[f'{tr_dt}_to_datetime'].dt.second
     df[f'{tr_dt}_split'] = (df[f'{tr_dt}_to_datetime'].dt.year - 2017) * 12 + \
                                 df[f'{tr_dt}_to_datetime'].dt.month
-
 
     # US HOLIDAYS
     dates_range = pd.date_range(start='2017-10-01', end='2019-01-01')
@@ -194,30 +252,37 @@ def add_datetime_features(df):
         .isin(us_holidays)\
         .astype(np.int8)
 
-    df['mean_time_between_transactions'] = df\
-        .groupby('card1')['time_from_prev_transaction'] \
-        .transform('mean')
-    df['median_time_between_transactions'] = df \
-        .groupby('card1')['time_from_prev_transaction'] \
-        .transform(np.nanmedian)
+    for agg in [['card1'], ['card1', 'subcard_categorical']]:
 
-    df['time_from_prev_transaction_ratio_to_mean'] = \
-        df['time_from_prev_transaction'] / df['mean_time_between_transactions']
+        col_name = '_'.join(agg)
 
-    df['time_from_prev_transaction_ratio_to_median'] = \
-        df['time_from_prev_transaction'] / df['median_time_between_transactions']
+        df[f'{col_name}_mean_time_between_transactions'] = df\
+            .groupby(agg)[f'time_from_prev_transaction_by_{col_name}'] \
+            .transform('mean')
+        df[f'{col_name}_median_time_between_transactions'] = df \
+            .groupby(agg)[f'time_from_prev_transaction_by_{col_name}'] \
+            .transform(np.nanmedian)
 
-    df['time_to_next_transaction_ratio_to_mean'] = \
-        df['time_to_next_transaction'] / df['mean_time_between_transactions']
+        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_mean'] = \
+            df[f'time_from_prev_transaction_by_{col_name}'] / \
+            df[f'{col_name}_mean_time_between_transactions']
 
-    df['time_to_next_transaction_ratio_to_median'] = \
-        df['time_to_next_transaction'] / df[
-            'median_time_between_transactions']
+        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_median'] = \
+            df[f'time_from_prev_transaction_by_{col_name}'] / \
+            df[f'{col_name}_median_time_between_transactions']
+
+        df[f'time_to_next_transaction_by_{col_name}_ratio_to_mean'] = \
+            df[f'time_to_next_transaction_by_{col_name}'] / \
+            df[f'{col_name}_mean_time_between_transactions']
+
+        df[f'time_to_next_transaction_by_{col_name}_ratio_to_median'] = \
+            df[f'time_to_next_transaction_by_{col_name}'] / \
+            df[f'{col_name}_median_time_between_transactions']
 
     df.reset_index(inplace=True)
     df.set_index('TransactionDT_to_datetime', inplace=True)
 
-    for interval in ['1min', '1h', '1d']:
+    for interval in ['1min', '10min', '7d']:
         df[f'TransactionAmt_count_within_{interval}'] = df\
             .groupby('card1')['TransactionAmt']\
             .rolling(interval)\
@@ -250,6 +315,14 @@ def add_datetime_features(df):
             .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
             .values
 
+        df[f'TransactionAmt_unique_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .apply(lambda x: len(np.unique(x))) \
+            .reset_index() \
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
+            .values
+
     # df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
     # df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
     #     .groupby('card1')['TransactionDT']\
@@ -279,8 +352,7 @@ def encode_categorical_features(df, cat_features):
 
 
 def process_id_33(df):
-    df[['id_33_height', 'id_33_width']] = df['id_33'].str.split('x',
-                                                                expand=True)
+    df[['id_33_height', 'id_33_width']] = df['id_33'].str.split('x', expand=True)
 
     df['id_33_width'] = df['id_33_width'].astype(float)
     df['id_33_height'] = df['id_33_height'].astype(float)
@@ -330,6 +402,10 @@ def process_id_30(df):
     df['OS_V_COMBINED'] = df['OS_V_COMBINED'].astype(float)
 
     df['OS_V_MAJOR'] = df['OS_NAME'].astype(str) + '_' + df['OS_V0'].astype(str)
+    df['OS_VERSION_FULL'] = df['OS_V0'].astype(str) + '_' + df['OS_V1'].astype(str)\
+                            + '_' + df['OS_V2'].astype(str)
+
+    df['OS_VERSION_MINIMAL'] = df['OS_V0'].astype(str) + '_' + df['OS_V1'].astype(str)
 
     return df
 
@@ -535,28 +611,94 @@ def V_groups_to_nan(df):
 
 def advanced_V_processing(df):
 
-    df['V126-137_mean_with_zeros'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
-    df['V126-137_std'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
+    # df['V126-137_mean_with_zeros'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
+    # df['V126-137_std'] = df[[f'V{i}' for i in range(126, 138)]].mean(axis=1)
+    #
+    # df['V306-321_mean_with_zeros'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
+    # df['V306-321_std'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
+    #
+    # df[f'V126-137_mean'] = \
+    #     df[[f'V{i}' for i in range(126, 138)]].sum(axis=1) / \
+    #     (df[[f'V{i}' for i in range(126, 138)]] > 0).sum(axis=1)
+    #
+    # df[f'V306-321_mean'] = \
+    #     df[[f'V{i}' for i in range(306, 322)]].sum(axis=1) / \
+    #     (df[[f'V{i}' for i in range(306, 322)]] > 0).sum(axis=1)
+    #
+    # df[[f'V{i}_diff' for i in range(279, 306)]] = df[[f'V{i}' for i in range(279, 306)]].diff()
+    #
+    # for min_i, max_i in [
+    #     (126, 137), (306, 321)
+    # ]:
+    #     for i in range(min_i, max_i + 1):
+    #         df[f'V{i}_card1_mean'] = df\
+    #             .groupby('card1')[f'V{i}']\
+    #             .transform('mean')
 
-    df['V306-321_mean_with_zeros'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
-    df['V306-321_std'] = df[[f'V{i}' for i in range(306, 322)]].mean(axis=1)
-
-    df[f'V126-137_mean'] = \
-        df[[f'V{i}' for i in range(126, 138)]].sum(axis=1) / \
-        (df[[f'V{i}' for i in range(126, 138)]] > 0).sum(axis=1)
-
-    df[f'V306-321_mean'] = \
-        df[[f'V{i}' for i in range(306, 322)]].sum(axis=1) / \
-        (df[[f'V{i}' for i in range(306, 322)]] > 0).sum(axis=1)
-
-    df[[f'V{i}_diff' for i in range(279, 306)]] = df[[f'V{i}' for i in range(279, 306)]].diff()
-
-    for min_i, max_i in [
-        (126, 137), (306, 321)
-    ]:
-        for i in range(min_i, max_i + 1):
-            df[f'V{i}_card1_mean'] = df\
-                .groupby('card1')[f'V{i}']\
-                .transform('mean')
+    df[[f'V{i}_diff1' for i in range(126, 138)]] = df\
+        .groupby(['card1', 'ProductCD', 'addr1'])[[f'V{i}' for i in range(126, 138)]]\
+        .diff()
 
     return df
+
+
+def add_shifted_features(df):
+
+    columns_agg = [['card1', 'ProductCD']]
+    column_to_shift = 'TransactionAmt'
+
+    for columns in columns_agg:
+        col_name = '_'.join(columns)
+        for shift in range(1, 2):
+
+            df[f'prev_{shift}_{col_name}_{column_to_shift}'] = df\
+                .groupby(columns)[column_to_shift]\
+                .shift(shift)
+
+            df[f'next_{shift}_{col_name}_{column_to_shift}'] = df \
+                .groupby(columns)[column_to_shift] \
+                .shift(-shift)
+
+    return df
+
+
+def relax_data(df_train, df_test, col):
+    cv1 = pd.DataFrame(
+        df_train[col]\
+            .value_counts()
+            .reset_index()
+            .rename({col: 'train'}, axis=1)
+    )
+    cv2 = pd.DataFrame(
+        df_test[col]\
+            .value_counts()
+            .reset_index()
+            .rename({col: 'test'}, axis=1)
+    )
+    cv3 = pd.merge(cv1, cv2, on='index', how='outer')
+
+    factor = len(df_test) / len(df_train)
+
+    cv3['train'].fillna(0, inplace=True)
+    cv3['test'].fillna(0, inplace=True)
+    cv3['remove'] = False
+    cv3['remove'] = cv3['remove'] | (cv3['train'] < len(df_train) / 10000)
+    cv3['remove'] = cv3['remove'] | (factor * cv3['train'] < cv3['test'] / 3)
+    cv3['remove'] = cv3['remove'] | (factor * cv3['train'] > 3 * cv3['test'])
+    cv3['new'] = cv3.apply(
+        lambda x: x['index']
+        if x['remove'] == False
+        else 0,
+        axis=1
+    )
+
+    n_removed = sum(cv3['remove'])
+    print(f'{col} Relaxed rows = {n_removed}')
+
+    cv3['new'], _ = cv3['new'].factorize(sort=True)
+    cv3.set_index('index', inplace=True)
+    cc = cv3['new'].to_dict()
+    df_train[col] = df_train[col].map(cc)
+    df_test[col] = df_test[col].map(cc)
+
+    return df_train, df_test

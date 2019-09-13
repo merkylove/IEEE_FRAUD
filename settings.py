@@ -46,6 +46,10 @@ CATEGORICAL_FEATURES = [
     'R_emaildomain_2',
     'R_emaildomain_3',
     #
+    'cents_categorical',
+    'subcard_categorical',
+    'OS_VERSION_FULL',
+    'OS_VERSION_MINIMAL'
 ] + [f'id_{i}' for i in range(12, 39)]
 
 
