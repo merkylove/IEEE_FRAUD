@@ -24,13 +24,6 @@ def generate_uid_features(df):
 
 
 def exchange_rate_took_place_feature(df):
-<<<<<<< HEAD
-=======
-    df['is_foreign'] = df['TransactionAmt'].astype('str')\
-        .str\
-        .split('.', expand=True)[1]\
-        .apply(lambda x: len(x) > 2)
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 
     df['cents'] = np.round(df['TransactionAmt'] - df['TransactionAmt'].astype(int), 3)
     df['cents_categorical'] = df['cents'].astype(str)
@@ -169,11 +162,7 @@ def extract_registration_date(df):
                 x - datetime.date(1970, 1, 1)
         ).total_seconds()
     )
-<<<<<<< HEAD
     df['subcard_categorical'] = df['card1'].astype(str) + '_' + df['subcard_reg_date']\
-=======
-    df['subcard_categorical'] = df['subcard_reg_date']\
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
         .dt\
         .date\
         .astype(str)
