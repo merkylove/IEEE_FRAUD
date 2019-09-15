@@ -261,11 +261,8 @@ def add_datetime_features(df):
     # df[f'{tr_dt}_dayOfWeek'] = df[f'{tr_dt}_to_datetime'].apply(
     #     lambda x: x.weekday()
     # )
-<<<<<<< HEAD
     # df[f'{tr_dt}_weekOfMonth'] = (df[f'{tr_dt}_to_datetime'].dt.day - 1) // 7 + 1
-=======
     df[f'{tr_dt}_weekOfMonth'] = (df[f'{tr_dt}_to_datetime'].dt.day - 1) // 7 + 1
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
     df[f'{tr_dt}_hour'] = df[f'{tr_dt}_to_datetime'].dt.hour
     #df[f'{tr_dt}_minute'] = df[f'{tr_dt}_to_datetime'].dt.minute
     #df[f'{tr_dt}_second'] = df[f'{tr_dt}_to_datetime'].dt.second
@@ -278,7 +275,6 @@ def add_datetime_features(df):
         start=dates_range.min(),
         end=dates_range.max()
     )
-<<<<<<< HEAD
     # df['is_holiday'] = df[f'{tr_dt}_to_datetime']\
     #     .dt\
     #     .date\
@@ -287,16 +283,6 @@ def add_datetime_features(df):
     #     .astype(np.int8)
 
     for agg in [['card1', 'subcard_categorical']]:
-=======
-    df['is_holiday'] = df[f'{tr_dt}_to_datetime']\
-        .dt\
-        .date\
-        .astype('datetime64')\
-        .isin(us_holidays)\
-        .astype(np.int8)
-
-    for agg in [['card1'], ['card1', 'subcard_categorical']]:
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 
         col_name = '_'.join(agg)
 
@@ -306,8 +292,6 @@ def add_datetime_features(df):
         df[f'{col_name}_median_time_between_transactions'] = df \
             .groupby(agg)[f'time_from_prev_transaction_by_{col_name}'] \
             .transform(np.nanmedian)
-
-<<<<<<< HEAD
         # df[f'time_from_prev_transaction_by_{col_name}_ratio_to_mean'] = \
         #     df[f'time_from_prev_transaction_by_{col_name}'] / \
         #     df[f'{col_name}_mean_time_between_transactions']
@@ -323,28 +307,10 @@ def add_datetime_features(df):
         # df[f'time_to_next_transaction_by_{col_name}_ratio_to_median'] = \
         #     df[f'time_to_next_transaction_by_{col_name}'] / \
         #     df[f'{col_name}_median_time_between_transactions']
-=======
-        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_mean'] = \
-            df[f'time_from_prev_transaction_by_{col_name}'] / \
-            df[f'{col_name}_mean_time_between_transactions']
-
-        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_median'] = \
-            df[f'time_from_prev_transaction_by_{col_name}'] / \
-            df[f'{col_name}_median_time_between_transactions']
-
-        df[f'time_to_next_transaction_by_{col_name}_ratio_to_mean'] = \
-            df[f'time_to_next_transaction_by_{col_name}'] / \
-            df[f'{col_name}_mean_time_between_transactions']
-
-        df[f'time_to_next_transaction_by_{col_name}_ratio_to_median'] = \
-            df[f'time_to_next_transaction_by_{col_name}'] / \
-            df[f'{col_name}_median_time_between_transactions']
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 
     df.reset_index(inplace=True)
     df.set_index('TransactionDT_to_datetime', inplace=True)
 
-<<<<<<< HEAD
     for interval in ['1min', '10min']:
         # df[f'TransactionAmt_count_within_{interval}'] = df\
         #     .groupby('card1')['TransactionAmt']\
@@ -353,16 +319,6 @@ def add_datetime_features(df):
         #     .reset_index()\
         #     .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
         #     .values
-=======
-    for interval in ['1min', '10min', '7d']:
-        df[f'TransactionAmt_count_within_{interval}'] = df\
-            .groupby('card1')['TransactionAmt']\
-            .rolling(interval)\
-            .count()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 
         df[f'TransactionAmt_sum_within_{interval}'] = df \
             .groupby('card1')['TransactionAmt'] \
@@ -380,7 +336,6 @@ def add_datetime_features(df):
             .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
             .values
 
-<<<<<<< HEAD
         # df[f'TransactionAmt_std_within_{interval}'] = df \
         #     .groupby('card1')['TransactionAmt'] \
         #     .rolling(interval) \
@@ -396,23 +351,6 @@ def add_datetime_features(df):
         #     .reset_index() \
         #     .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
         #     .values
-=======
-        df[f'TransactionAmt_std_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .std()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
-
-        df[f'TransactionAmt_unique_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .apply(lambda x: len(np.unique(x))) \
-            .reset_index() \
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
-            .values
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 
     # df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
     # df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
@@ -497,21 +435,12 @@ def process_id_30(df):
                             + '_' + df['OS_V2'].astype(str)
 
     df['OS_VERSION_MINIMAL'] = df['OS_V0'].astype(str) + '_' + df['OS_V1'].astype(str)
-<<<<<<< HEAD
 
     return df
 
 
 def features_to_PCA(df, columns, prefix, n_components=0.99):
 
-=======
-
-    return df
-
-
-def features_to_PCA(df, columns, prefix, n_components=0.99):
-
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
     pca_reducer = PCA(n_components=n_components)
 
     transformed_values = pca_reducer.fit_transform(
@@ -562,74 +491,7 @@ def C_log_features(df):
 
 def add_is_null_features(
         df,
-<<<<<<< HEAD
         columns
-=======
-        columns=(
-            'addr1',
-            'addr2',
-            'dist1',
-            'dist2',
-            'D1',
-            'D2',
-            'D3',
-            'D5',
-            'D6',
-            'D7',
-            'D8',
-            'D9',
-            'D10',
-            'D11',
-            'D12',
-            'D13',
-            'D14',
-            'D15',
-            'M1',  # == M2=3
-            'M4',
-            'M6',
-            'M7',  # == M8-9
-            'id_01',
-            'id_02',
-            'id_03',
-            'id_04',
-            'id_05',
-            'id_06',
-            'id_07',
-            'id_08',
-            'id_09',
-            'id_10',
-            'id_11',
-            'id_12',
-            'id_13',
-            'id_14',
-            'id_15',
-            'id_16',
-            'id_17',
-            'id_18',
-            'id_19',
-            'id_20',
-            'id_21',
-            'id_22',
-            'id_23',
-            'id_24',
-            'id_25',
-            'id_26',
-            'id_27',
-            'id_28',
-            'id_29',
-            'id_30',
-            'id_31',
-            'id_32',
-            'id_33',
-            'id_34',
-            'id_35',
-            'id_36',
-            'id_37',
-            'id_38',
-            'DeviceType',
-            'DeviceInfo'
-        )
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
 ):
 
     for column in columns:
@@ -805,7 +667,6 @@ def relax_data(df_train, df_test, col):
     df_train[col] = df_train[col].map(cc)
     df_test[col] = df_test[col].map(cc)
 
-<<<<<<< HEAD
     return df_train, df_test
 
 
@@ -856,6 +717,3 @@ def kfold_target_encoding(df, columns_to_group):
             .map(mapper).values
 
     return df
-=======
-    return df_train, df_test
->>>>>>> 9db2e99f37f90c375645f0ab37a265598d7607c0
