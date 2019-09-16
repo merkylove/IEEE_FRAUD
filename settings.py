@@ -6,6 +6,7 @@ START_DATE = datetime.datetime.strptime('2017-11-30', '%Y-%m-%d')
 TARGET = 'isFraud'
 
 CATEGORICAL_FEATURES = [
+    'id_31_BROWSER_NAME',
     'device_name',
     'ProductCD',
     'card1',

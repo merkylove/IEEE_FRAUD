@@ -6,7 +6,8 @@ import datetime
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold
+from sklearn.model_selection import GroupKFold
+
 
 from settings import START_DATE, V_GROUPS_BY_NOTNULL
 
@@ -264,12 +265,12 @@ def add_datetime_features(df):
         start=dates_range.min(),
         end=dates_range.max()
     )
-    # df['is_holiday'] = df[f'{tr_dt}_to_datetime']\
-    #     .dt\
-    #     .date\
-    #     .astype('datetime64')\
-    #     .isin(us_holidays)\
-    #     .astype(np.int8)
+    df['is_holiday'] = df[f'{tr_dt}_to_datetime']\
+        .dt\
+        .date\
+        .astype('datetime64')\
+        .isin(us_holidays)\
+        .astype(np.int8)
 
     for agg in [['card1', 'subcard_categorical']]:
 
@@ -281,33 +282,33 @@ def add_datetime_features(df):
         df[f'{col_name}_median_time_between_transactions'] = df \
             .groupby(agg)[f'time_from_prev_transaction_by_{col_name}'] \
             .transform(np.nanmedian)
-        # df[f'time_from_prev_transaction_by_{col_name}_ratio_to_mean'] = \
-        #     df[f'time_from_prev_transaction_by_{col_name}'] / \
-        #     df[f'{col_name}_mean_time_between_transactions']
-        #
-        # df[f'time_from_prev_transaction_by_{col_name}_ratio_to_median'] = \
-        #     df[f'time_from_prev_transaction_by_{col_name}'] / \
-        #     df[f'{col_name}_median_time_between_transactions']
-        #
-        # df[f'time_to_next_transaction_by_{col_name}_ratio_to_mean'] = \
-        #     df[f'time_to_next_transaction_by_{col_name}'] / \
-        #     df[f'{col_name}_mean_time_between_transactions']
-        #
-        # df[f'time_to_next_transaction_by_{col_name}_ratio_to_median'] = \
-        #     df[f'time_to_next_transaction_by_{col_name}'] / \
-        #     df[f'{col_name}_median_time_between_transactions']
+        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_mean'] = \
+            df[f'time_from_prev_transaction_by_{col_name}'] / \
+            df[f'{col_name}_mean_time_between_transactions']
+
+        df[f'time_from_prev_transaction_by_{col_name}_ratio_to_median'] = \
+            df[f'time_from_prev_transaction_by_{col_name}'] / \
+            df[f'{col_name}_median_time_between_transactions']
+
+        df[f'time_to_next_transaction_by_{col_name}_ratio_to_mean'] = \
+            df[f'time_to_next_transaction_by_{col_name}'] / \
+            df[f'{col_name}_mean_time_between_transactions']
+
+        df[f'time_to_next_transaction_by_{col_name}_ratio_to_median'] = \
+            df[f'time_to_next_transaction_by_{col_name}'] / \
+            df[f'{col_name}_median_time_between_transactions']
 
     df.reset_index(inplace=True)
     df.set_index('TransactionDT_to_datetime', inplace=True)
 
     for interval in ['1min', '10min']:
-        # df[f'TransactionAmt_count_within_{interval}'] = df\
-        #     .groupby('card1')['TransactionAmt']\
-        #     .rolling(interval)\
-        #     .count()\
-        #     .reset_index()\
-        #     .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-        #     .values
+        df[f'TransactionAmt_count_within_{interval}'] = df\
+            .groupby('card1')['TransactionAmt']\
+            .rolling(interval)\
+            .count()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
 
         df[f'TransactionAmt_sum_within_{interval}'] = df \
             .groupby('card1')['TransactionAmt'] \
@@ -325,26 +326,26 @@ def add_datetime_features(df):
             .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
             .values
 
-        # df[f'TransactionAmt_std_within_{interval}'] = df \
-        #     .groupby('card1')['TransactionAmt'] \
-        #     .rolling(interval) \
-        #     .std()\
-        #     .reset_index()\
-        #     .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-        #     .values
+        df[f'TransactionAmt_std_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .std()\
+            .reset_index()\
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+            .values
 
-        # df[f'TransactionAmt_unique_within_{interval}'] = df \
-        #     .groupby('card1')['TransactionAmt'] \
-        #     .rolling(interval) \
-        #     .apply(lambda x: len(np.unique(x))) \
-        #     .reset_index() \
-        #     .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
-        #     .values
+        df[f'TransactionAmt_unique_within_{interval}'] = df \
+            .groupby('card1')['TransactionAmt'] \
+            .rolling(interval) \
+            .apply(lambda x: len(np.unique(x))) \
+            .reset_index() \
+            .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
+            .values
 
-    # df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
-    # df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
-    #     .groupby('card1')['TransactionDT']\
-    #     .transform('count')
+    df['Transaction_Number'] = df.groupby('subcard_categorical').cumcount() + 1
+    df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
+        .groupby('subcard_categorical')['TransactionDT']\
+        .transform('count')
 
     # df.drop(
     #     labels=[f'{tr_dt}_year', f'{tr_dt}_to_datetime', f'{tr_dt}_month'],
@@ -374,6 +375,29 @@ def process_id_33(df):
 
     df['id_33_width'] = df['id_33_width'].astype(float)
     df['id_33_height'] = df['id_33_height'].astype(float)
+
+    return df
+
+
+def process_id_31(df):
+
+    df['id_31_BROWSER_NAME'] = df['id_31'].fillna('NAN_BROWSER').apply(
+        lambda x: ' '.join([i for i in x.split() if '.' not in i])
+    )
+
+    df['id_31_BROWSER_VERSION'] = df['id_31'].fillna('NAN_BROWSER').apply(
+        lambda x: ' '.join([i for i in x.split()     if '.' in i])
+    )
+
+    df['id_31_BROWSER_VERSION'] = df['id_31_BROWSER_VERSION']\
+        .replace(
+        {
+            'NAN_BROWSER': np.nan,
+            '': np.nan
+        }
+    )
+
+    df['id_31_BROWSER_VERSION'] = df['id_31_BROWSER_VERSION'].astype(float)
 
     return df
 
@@ -487,6 +511,8 @@ def add_is_null_features(
         df[f'{column}_isnull'] = df[column].isnull()
 
     return df
+
+
 
 
 def device_to_group(df):
@@ -679,7 +705,7 @@ def norm_temporal_feature(df, column_to_norm, to_norm_by):
 
 def kfold_target_encoding(df, columns_to_group):
 
-    folds = KFold(n_splits=5, shuffle=True)
+    folds = GroupKFold(n_splits=5)
 
     col_name = '_'.join(columns_to_group)
     col_name = f'target_encoded_{col_name}'
@@ -692,7 +718,11 @@ def kfold_target_encoding(df, columns_to_group):
         df[col_name] += '_'
         df[col_name] += df[i].astype(str)
 
-    for train_ids, val_ids in folds.split(df):
+    for train_ids, val_ids in folds.split(
+            X=df,
+            y=df['isFraud'],
+            groups=df['subcard_categorical'].tolist()
+    ):
 
         mapper = calc_smooth_mean(
             df.iloc[train_ids],
@@ -704,5 +734,89 @@ def kfold_target_encoding(df, columns_to_group):
         df.iloc[val_ids, df.columns.get_loc(col_name)] = df\
             .iloc[val_ids][col_name]\
             .map(mapper).values
+
+        df.iloc[val_ids, df.columns.get_loc(col_name)].fillna(
+            df.iloc[train_ids]['isFraud'].mean(),
+            inplace=True
+        )
+
+    df[col_name] = df[col_name].astype('float')
+
+    return df
+
+
+def get_base_target_encoding_mapper(df, columns_to_group):
+    mapper = calc_smooth_mean(
+        df,
+        columns_to_group,
+        ['mean']
+    )
+    mapper = mapper['mean']
+
+    return mapper
+
+
+def apply_target_encoder(df_train, df_test, columns_to_group):
+
+    mapper = get_base_target_encoding_mapper(df_train, columns_to_group)
+
+    col_name = '_'.join(columns_to_group)
+    col_name = f'target_encoded_{col_name}'
+
+    df_test[col_name] = df_test[columns_to_group[0]] \
+        .astype(str) \
+        .copy()
+
+    for i in columns_to_group[1:]:
+        df_test[col_name] += '_'
+        df_test[col_name] += df_test[i].astype(str)
+
+    df_test[col_name] = df_test[col_name].map(mapper).values
+    df_test[col_name].fillna(
+        df_train['isFraud'].mean(),
+        inplace=True
+    )
+
+    df_test[col_name] = df_test[col_name].astype('float')
+
+    return df_test
+
+
+def values_normalization(df, col, clip=True, minmax=True):
+
+    __TMP = '__TMP'
+
+    df[__TMP] = df['TransactionDT_split'].astype(str) + '_' \
+                + df['TransactionDT_dayOfMonth'].astype(str)
+
+    new_col = col + '_' + 'GROUPED_BY_DAY'
+    df_tmp = df[[col, __TMP]].copy()
+    df_tmp[col] = df_tmp[col].astype(float)
+    if clip:
+        df_tmp[col] = df_tmp[col].clip(0)
+
+    aggs = df_tmp.groupby(__TMP)[col].agg(['min', 'max', 'std', 'mean'])
+
+    agg_max = aggs['max'].to_dict()
+    agg_min = aggs['min'].to_dict()
+    agg_std = aggs['std'].to_dict()
+    agg_mean = aggs['mean'].to_dict()
+
+    df['temp_min'] = df[__TMP].map(agg_max)
+    df['temp_max'] = df[__TMP].map(agg_min)
+    df['temp_std'] = df[__TMP].map(agg_std)
+    df['temp_mean'] = df[__TMP].map(agg_mean)
+
+    df[new_col + '_min_max'] = ((df[col] - df['temp_min']) / \
+                                    (df['temp_max'] - df[
+                                        'temp_min'])).astype(float)
+
+    df[new_col + '_std_score'] = (df[col] - df['temp_mean']) / (df['temp_std'])
+
+    df.drop(
+        labels=['temp_min', 'temp_max', 'temp_std', 'temp_mean'],
+        axis=1,
+        inplace=True
+    )
 
     return df
