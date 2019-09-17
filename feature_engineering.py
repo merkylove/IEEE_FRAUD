@@ -27,6 +27,7 @@ def generate_uid_features(df):
 def exchange_rate_took_place_feature(df):
 
     df['cents'] = np.round(df['TransactionAmt'] - df['TransactionAmt'].astype(int), 3)
+    df['dollars'] = df['TransactionAmt'].astype(int).astype(str)
     df['cents_categorical'] = df['cents'].astype(str)
 
     return df
@@ -131,8 +132,13 @@ def count_features(
             .transform('count')
 
         if with_typical_for_user and len(c_agg) > 1:
-            df[f'{col_name}_count_how_typical'] = df[f'{col_name}_count'] / \
+            df[f'{col_name}_count_how_typical_by_card1'] = df[f'{col_name}_count'] / \
                 df.groupby(['card1'])['TransactionDT'].transform('count')
+
+            df[f'{col_name}_count_how_typical_subcard'] = df[f'{col_name}_count'] / \
+                                                  df.groupby(['subcard_categorical'])[
+                                                      'TransactionDT'].transform(
+                                                      'count')
 
         # we remove only single features
         if remove_rare and len(c_agg) == 1:
@@ -513,8 +519,6 @@ def add_is_null_features(
     return df
 
 
-
-
 def device_to_group(df):
     df['DeviceInfo'] = df['DeviceInfo'].fillna('unknown_device').str.lower()
 
@@ -608,16 +612,16 @@ def advanced_V_processing(df):
     #
     # df[[f'V{i}_diff' for i in range(279, 306)]] = df[[f'V{i}' for i in range(279, 306)]].diff()
     #
-    # for min_i, max_i in [
-    #     (126, 137), (306, 321)
-    # ]:
-    #     for i in range(min_i, max_i + 1):
-    #         df[f'V{i}_card1_mean'] = df\
-    #             .groupby('card1')[f'V{i}']\
-    #             .transform('mean')
+    for min_i, max_i in [
+        (126, 137), #(306, 321)
+    ]:
+        for i in range(min_i, max_i + 1):
+            df[f'V{i}_card1_mean'] = df\
+                .groupby('subcard_categorical')[f'V{i}']\
+                .transform('mean')
 
     df[[f'V{i}_diff1' for i in range(126, 138)]] = df\
-        .groupby(['card1', 'ProductCD', 'addr1'])[[f'V{i}' for i in range(126, 138)]]\
+        .groupby(['subcard_categorical', 'ProductCD', 'addr1'])[[f'V{i}' for i in range(126, 138)]]\
         .diff()
 
     return df
@@ -628,17 +632,23 @@ def add_shifted_features(df):
     columns_agg = [['card1', 'ProductCD']]
     column_to_shift = 'TransactionAmt'
 
+    MAX_SHIFT = 5
+
     for columns in columns_agg:
         col_name = '_'.join(columns)
-        for shift in range(1, 2):
 
-            df[f'prev_{shift}_{col_name}_{column_to_shift}'] = df\
-                .groupby(columns)[column_to_shift]\
-                .shift(shift)
+        grouping = df.groupby(columns)[column_to_shift]
 
-            df[f'next_{shift}_{col_name}_{column_to_shift}'] = df \
-                .groupby(columns)[column_to_shift] \
-                .shift(-shift)
+        df[f'prev_{MAX_SHIFT}_{col_name}_{column_to_shift}'] = 0
+        df[f'next_{MAX_SHIFT}_{col_name}_{column_to_shift}'] = 0
+
+        for shift in range(1, MAX_SHIFT):
+
+            df[f'prev_{MAX_SHIFT}_{col_name}_{column_to_shift}'] += grouping\
+                .shift(shift) == df[column_to_shift]
+
+            df[f'next_{MAX_SHIFT}_{col_name}_{column_to_shift}'] += grouping\
+                .shift(-shift) == df[column_to_shift]
 
     return df
 
@@ -814,9 +824,40 @@ def values_normalization(df, col, clip=True, minmax=True):
     df[new_col + '_std_score'] = (df[col] - df['temp_mean']) / (df['temp_std'])
 
     df.drop(
-        labels=['temp_min', 'temp_max', 'temp_std', 'temp_mean'],
+        labels=['temp_min', 'temp_max', 'temp_std', 'temp_mean', __TMP],
         axis=1,
         inplace=True
     )
 
     return df
+
+
+def advanced_D_processing(df):
+    df['D8_not_same_day'] = np.where(df['D8'] >= 1, 1, 0)
+    df['D8_D9_decimal_dist'] = df['D8'].fillna(0) \
+                               - df['D8'].fillna(0).astype(int)
+    df['D8_D9_decimal_dist'] = (
+                                       (
+                                               df['D8_D9_decimal_dist']
+                                               - df['D9']
+                                       ) ** 2
+                               ) ** 0.5
+    df['D8'] = df['D8'].fillna(-1).astype(int)
+
+    return df
+
+
+def advanced_M_processing(df):
+    i_cols = ['M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9']
+
+    df['M_sum'] = df[i_cols].sum(axis=1).astype(np.int8)
+    df['M_na'] = df[i_cols].isna().sum(axis=1).astype(np.int8)
+
+    return df
+
+
+def nan_count(df, columns):
+    df['notnull_count'] = df[columns].notnull().sum(axis=1)
+    return df
+
+

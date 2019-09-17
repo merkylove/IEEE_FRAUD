@@ -9,8 +9,10 @@ from feature_engineering import add_datetime_features, process_id_30, \
     device_to_group, remove_rare_values, base_transaction_delta_features, \
     V_groups_to_nan, advanced_V_processing, add_shifted_features, relax_data, \
     extract_registration_date, norm_temporal_feature, kfold_target_encoding, \
-    process_id_31, values_normalization
-from settings import CATEGORICAL_FEATURES, TARGET, USELESS_FEATURES_ACCORDING_TO_PERMUTATIONS
+    process_id_31, values_normalization, advanced_D_processing, \
+    advanced_M_processing, nan_count
+from settings import CATEGORICAL_FEATURES, TARGET, \
+    USELESS_FEATURES_ACCORDING_TO_PERMUTATIONS
 
 
 def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
@@ -25,6 +27,10 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
 
     train_size = train.shape[0]
     test_size = test.shape[0]
+
+    BASE_FIELDS = test.columns.tolist()
+    BASE_FIELDS = set(BASE_FIELDS) - set(['TransactionDT', 'TransactionID'])
+    BASE_FIELDS = list(BASE_FIELDS)
 
     print('NEW')
 
@@ -45,10 +51,11 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
 
     train = extract_registration_date(train)
     test = extract_registration_date(test)
+
     train = base_transaction_delta_features(train)
     test = base_transaction_delta_features(test)
-    # train = advanced_V_processing(train)
-    # test = advanced_V_processing(test)
+    train = advanced_V_processing(train)
+    test = advanced_V_processing(test)
     train_test_joined = pd.concat([train, test], sort=True)
     print('Concatted', datetime.datetime.now())
 
@@ -87,13 +94,11 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
 
         train_test_joined = values_normalization(train_test_joined, i)
 
-    #train_test_joined = train_test_joined[train_test_joined['TransactionDT_split'] > 12]
-
     train_test_joined = exchange_rate_took_place_feature(train_test_joined)
     print('DT FEATURES', datetime.datetime.now())
     train_test_joined = process_id_31(train_test_joined)
     train_test_joined = process_id_30(train_test_joined)
-    #train_test_joined = process_id_33(train_test_joined)
+    train_test_joined = process_id_33(train_test_joined)
     train_test_joined = emaildomain_features(train_test_joined)
     train_test_joined = device_to_group(train_test_joined)
     #train_test_joined = V_groups_to_nan(train_test_joined)
@@ -106,58 +111,33 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
         columns_agg=[
             ['card3'],
             ['TransactionDT_hour'],
-            # derived
             ['R_emaildomain'],
             ['P_emaildomain'],
             ['card2', 'addr1'],
-            ['card1', 'TransactionDT_hour'],
             ['ProductCD'],
-            ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'ProductCD', 'addr1'],
-            ['card1', 'subcard_categorical', 'addr1'],
-            ['card1', 'addr1'],
             ['ProductCD', 'addr1'],
             ['subcard_categorical', 'R_emaildomain'],
             ['subcard_categorical', 'P_emaildomain'],
-            ['card1', 'subcard_categorical'],
-            ['card1'],
+            ['subcard_categorical'],
             ['card2'],
             ['card4'],
             ['card5'],
             ['card6'],
             ['addr1'],
             ['addr2'],
-            ['subcard_categorical', 'card2'],
-            ['subcard_categorical', 'card2'],
-            ['subcard_categorical', 'card3'],
-            ['subcard_categorical', 'card3'],
-            ['subcard_categorical', 'card4'],
-            ['subcard_categorical', 'card4'],
-            ['subcard_categorical', 'card6'],
-            ['subcard_categorical', 'card6'],
-            ['card1', 'TransactionDT_hour'],
             ['TransactionDT_dayOfMonth'],
             ['TransactionDT_weekOfMonth'],
             ['DeviceInfo'],
             ['device_name'],
-            ['subcard_categorical', 'device_name'],
-            ['subcard_categorical', 'DeviceInfo'],
-            # derived
-            ['card1', 'addr1'],
             ['card2', 'addr1'],
             ['card3', 'addr1'],
             ['card4', 'addr1'],
             ['card6', 'addr1'],
-            ['card1', 'P_emaildomain'],
-            ['card1', 'R_emaildomain'],
-            ['card1', 'TransactionDT_hour'],
-            ['card1', 'ProductCD'],
-            ['card1', 'ProductCD', 'addr1'],
             ['id_19'],
             ['id_20'],
             ['id_31'],
-        ] + [['subcard_categorical', f'C{i}'] for i in range(1, 15)]
-        + [['card1', f'C{i}'] for i in range(1, 15)],
+        ]
+                    + [[f'C{i}' for i in range(1, 15)]],
         with_typical_for_user=True
     )
 
@@ -170,6 +150,18 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
                 'TransactionDT_split',
                 'TransactionDT_dayOfMonth'
             ],
+            ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'ProductCD', 'addr1'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'addr1'],
+            ['card1', 'TransactionDT_hour'],
+            ['subcard_categorical', 'card2'],
+            ['subcard_categorical', 'card3'],
+            ['subcard_categorical', 'card4'],
+            ['subcard_categorical', 'card6'],
+            ['card1'],
+            ['subcard_categorical', 'device_name'],
+            ['subcard_categorical', 'DeviceInfo'],
             [
                 'card1',
                 'subcard_categorical',
@@ -177,27 +169,14 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
                 'TransactionDT_dayOfMonth',
                 'TransactionDT_hour'
             ],
-        ],
-        with_typical_for_user=False
-    )
-
-    train_test_joined = count_features(
-        train_test_joined,
-        columns_agg=[
-            [
-                'card1',
-                'subcard_categorical',
-                'TransactionDT_split',
-                'TransactionDT_dayOfMonth'
-            ],
-            [
-                'card1',
-                'subcard_categorical',
-                'TransactionDT_split',
-                'TransactionDT_dayOfMonth',
-                'TransactionDT_hour'
-            ],
-        ],
+            ['card1', 'P_emaildomain'],
+            ['card1', 'R_emaildomain'],
+            ['card1', 'TransactionDT_hour'],
+            ['card1', 'ProductCD'],
+            ['card1', 'ProductCD', 'addr1'],
+        ]
+                    + [['subcard_categorical', f'C{i}'] for i in range(1, 15)]
+                    + [['card1', f'C{i}'] for i in range(1, 15)],
         with_typical_for_user=False
     )
 
@@ -351,47 +330,9 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     #     ['card1']
     # )
 
-    # for to_norm_by in [
-    #     ['TransactionDT_split', 'TransactionDT_dayOfMonth'],
-    #     ['TransactionDT_split', 'TransactionDT_dayOfMonth', 'card1']
-    # ]:
-    #
-    #     for to_norm in [
-    #         'D1',
-    #         'D2',
-    #         'D3',
-    #         'D4',
-    #         'D5',
-    #         'D6',
-    #         'D7',
-    #         'D8',
-    #         'D10',
-    #         'D11',
-    #         'D12',
-    #         'D13',
-    #         'D14',
-    #         'D15',
-    #         'C1',
-    #         'C2',
-    #         'C4',
-    #         'C5',
-    #         'C6',
-    #         'C7',
-    #         'C8',
-    #         'C9',
-    #         'C10',
-    #         'C11',
-    #         'C12',
-    #         'C13',
-    #         'C14',
-    #         'subcard_reg_timestamp'
-    #     ]:
-    #
-    #         train_test_joined = norm_temporal_feature(
-    #             train_test_joined,
-    #             to_norm,
-    #             to_norm_by
-    #         )
+    train_test_joined = advanced_D_processing(train_test_joined)
+    train_test_joined = advanced_M_processing(train_test_joined)
+    train_test_joined = nan_count(train_test_joined, BASE_FIELDS)
 
     train_test_joined, encoders = encode_categorical_features(
         train_test_joined,
