@@ -8,7 +8,8 @@ from feature_engineering import add_datetime_features, process_id_30, \
     C_features_to_PCA, exchange_rate_took_place_feature, add_is_null_features, \
     device_to_group, remove_rare_values, base_transaction_delta_features, \
     V_groups_to_nan, advanced_V_processing, add_shifted_features, relax_data, \
-    extract_registration_date
+    extract_registration_date, values_normalization, advanced_D_processing, \
+    advanced_M_processing, nan_count
 from settings import CATEGORICAL_FEATURES, TARGET
 
 
@@ -24,6 +25,8 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
 
     train_size = train.shape[0]
     test_size = test.shape[0]
+
+    test_columns = test.columns.tolist()
 
     print('NEW')
 
@@ -67,6 +70,25 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     train_test_joined = add_shifted_features(train_test_joined)
     #train_test_joined = generate_uid_features(train_test_joined)
     print('ids, emaildomain', datetime.datetime.now())
+
+    for i in [
+        'D1',
+        'D2',
+        'D3',
+        'D4',
+        'D5',
+        'D6',
+        'D7',
+        'D8',
+        'D10',
+        'D11',
+        'D12',
+        'D13',
+        'D14',
+        'D15',
+        'subcard_reg_timestamp'
+    ]:
+        train_test_joined = values_normalization(train_test_joined, i)
 
     train_test_joined = count_features(
         train_test_joined,
@@ -302,9 +324,13 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
     #     ['card1']
     # )
 
+    train_test_joined = advanced_D_processing(train_test_joined)
+    train_test_joined = advanced_M_processing(train_test_joined)
+    #train_test_joined = nan_count(train_test_joined, BASE_FIELDS)
+
     train_test_joined, encoders = encode_categorical_features(
         train_test_joined,
-        CATEGORICAL_FEATURES
+        [i for i in CATEGORICAL_FEATURES if i in train_test_joined.columns.tolist()]
     )
     print('Encoders', datetime.datetime.now())
 

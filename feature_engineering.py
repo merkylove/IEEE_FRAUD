@@ -153,6 +153,7 @@ def extract_registration_date(df):
         lambda x: START_DATE + datetime.timedelta(seconds=x)
     )
 
+    # account1 reg date magic feature
     df['card_registered_delta_tmp'] = pd.to_timedelta(df['D1'], unit='day')
     df['subcard_reg_date'] = (
             df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp']
@@ -165,15 +166,36 @@ def extract_registration_date(df):
                 x - datetime.date(1970, 1, 1)
         ).total_seconds()
     )
-    df['subcard_categorical'] = df['subcard_reg_date']\
-        .dt\
-        .date\
-        .astype(str)
+
+    df['subcard_categorical'] = df['card1'].astype(str) + '_' + df['subcard_reg_date'].dt \
+        .date \
+        .astype(str)# + '_' + df['ProductCD']
+
+    # account 2 reg date magic feature
+    # df['card_registered_delta_tmp2'] = pd.to_timedelta(df['D4'].fillna(0), unit='day')
+    # df['subcard2_reg_date'] = (
+    #         df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp2']
+    # )
+    # df['subcard2_reg_timestamp'] = df['subcard2_reg_date'] \
+    #     .dt \
+    #     .date \
+    #     .apply(
+    #     lambda x: (
+    #             x - datetime.date(1970, 1, 1)
+    #     ).total_seconds()
+    # )
+    #
+    # df['subcard2_categorical'] = df['subcard_categorical'] + '_' + df['subcard2_reg_date'] \
+    #                                 .dt \
+    #                                 .date \
+    #                                 .astype(str)
 
     df.drop(
         labels=[
             'card_registered_delta_tmp',
-            'subcard_reg_date'
+            #'card_registered_delta_tmp2',
+            'subcard_reg_date',
+            #'subcard2_reg_date'
         ],
         axis=1,
         inplace=True
@@ -702,3 +724,72 @@ def relax_data(df_train, df_test, col):
     df_test[col] = df_test[col].map(cc)
 
     return df_train, df_test
+
+
+def values_normalization(df, col, clip=True, minmax=True):
+
+    __TMP = '__TMP'
+
+    df[__TMP] = df['TransactionDT_split'].astype(str) + '_' \
+                + df['TransactionDT_dayOfMonth'].astype(str)
+
+    new_col = col + '_' + 'GROUPED_BY_DAY'
+    df_tmp = df[[col, __TMP]].copy()
+    df_tmp[col] = df_tmp[col].astype(float)
+    if clip:
+        df_tmp[col] = df_tmp[col].clip(0)
+
+    aggs = df_tmp.groupby(__TMP)[col].agg(['min', 'max', 'std', 'mean'])
+
+    agg_max = aggs['max'].to_dict()
+    agg_min = aggs['min'].to_dict()
+    agg_std = aggs['std'].to_dict()
+    agg_mean = aggs['mean'].to_dict()
+
+    df['temp_min'] = df[__TMP].map(agg_max)
+    df['temp_max'] = df[__TMP].map(agg_min)
+    df['temp_std'] = df[__TMP].map(agg_std)
+    df['temp_mean'] = df[__TMP].map(agg_mean)
+
+    df[new_col + '_min_max'] = ((df[col] - df['temp_min']) / \
+                                    (df['temp_max'] - df[
+                                        'temp_min'])).astype(float)
+
+    df[new_col + '_std_score'] = (df[col] - df['temp_mean']) / (df['temp_std'])
+
+    df.drop(
+        labels=['temp_min', 'temp_max', 'temp_std', 'temp_mean', __TMP],
+        axis=1,
+        inplace=True
+    )
+
+    return df
+
+
+def advanced_D_processing(df):
+    df['D8_not_same_day'] = np.where(df['D8'] >= 1, 1, 0)
+    df['D8_D9_decimal_dist'] = df['D8'].fillna(0) \
+                               - df['D8'].fillna(0).astype(int)
+    df['D8_D9_decimal_dist'] = (
+                                       (
+                                               df['D8_D9_decimal_dist']
+                                               - df['D9']
+                                       ) ** 2
+                               ) ** 0.5
+    df['D8'] = df['D8'].fillna(-1).astype(int)
+
+    return df
+
+
+def advanced_M_processing(df):
+    i_cols = ['M1', 'M2', 'M3', 'M5', 'M6', 'M7', 'M8', 'M9']
+
+    df['M_sum'] = df[i_cols].sum(axis=1).astype(np.int8)
+    df['M_na'] = df[i_cols].isna().sum(axis=1).astype(np.int8)
+
+    return df
+
+
+def nan_count(df, columns):
+    df['notnull_count'] = df[columns].notnull().sum(axis=1)
+    return df

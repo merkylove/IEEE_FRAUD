@@ -49,7 +49,8 @@ CATEGORICAL_FEATURES = [
     'cents_categorical',
     'subcard_categorical',
     'OS_VERSION_FULL',
-    'OS_VERSION_MINIMAL'
+    'OS_VERSION_MINIMAL',
+    'subcard2_categorical'
 ] + [f'id_{i}' for i in range(12, 39)]
 
 
