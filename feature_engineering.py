@@ -189,6 +189,26 @@ def extract_registration_date(df):
     #                                 .dt \
     #                                 .date \
     #                                 .astype(str)
+    
+    df['min_D34'] = df[['D3', 'D4']].max(axis=1)
+    
+    # account1 reg date magic feature
+    df['card_registered_delta_tmp'] = pd.to_timedelta(df['min_D34'], unit='day')
+    df['subcard_reg_date'] = (
+            df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp']
+    )
+    df['subcard2_reg_timestamp'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .apply(
+        lambda x: (
+                x - datetime.date(1970, 1, 1)
+        ).total_seconds()
+    )
+
+    df['subcard2_categorical'] = df['subcard_reg_date'].astype(str) + '_' + df['subcard2_reg_date'].dt \
+        .date \
+        .astype(str)# + '_' + df['ProductCD']
 
     df.drop(
         labels=[
