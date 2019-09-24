@@ -102,7 +102,14 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
             ['ProductCD', 'addr1'],
             ['ProductCD'],
             ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'P_emaildomain'],
             ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_20'],
+            ['card1', 'subcard_categorical', 'id_19'],
+            ['card1', 'subcard_categorical', 'id_31'],
+            ['card1', 'subcard_categorical', 'card4'],
             ['card1', 'subcard_categorical', 'ProductCD', 'addr1'],
         ] + [['card1', f'C{i}'] for i in range(1, 15)],
         with_typical_for_user=True
@@ -162,6 +169,15 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
                     ['TransactionDT_weekOfMonth'],
                     # derived
                     ['card1', 'subcard_categorical'],
+                    ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_20'],
+            ['card1', 'subcard_categorical', 'id_19'],
+            ['card1', 'subcard_categorical', 'id_31'],
+            ['card1', 'subcard_categorical', 'card4']
                 ],
                 ['mean', 'std', np.nanmedian],
                 10
@@ -170,7 +186,8 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
                ['dist1'],
                [
                    ['card1'],
-                   ['card1', 'subcard_categorical']
+                   ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'DeviceInfo']
                ],
                ['mean', 'std', np.nanmedian],
                0

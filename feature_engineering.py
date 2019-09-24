@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from settings import START_DATE, V_GROUPS_BY_NOTNULL
 
 
+
 def generate_uid_features(df):
 
     df['bank_type'] = df['card3'].astype(str) + '_' + df['card5'].astype(str)
@@ -198,6 +199,7 @@ def emaildomain_features(df):
     return df
 
 
+
 def base_transaction_delta_features(
         df,
         column_aggs=[
@@ -205,6 +207,14 @@ def base_transaction_delta_features(
             ['card1', 'ProductCD'],
             ['card1', 'ProductCD', 'addr1'],
             ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_20'],
+            ['card1', 'subcard_categorical', 'id_19'],
+            ['card1', 'subcard_categorical', 'id_31'],
+            ['card1', 'subcard_categorical', 'card4']
         ]
 ):
 
@@ -252,7 +262,15 @@ def add_datetime_features(df):
         .isin(us_holidays)\
         .astype(np.int8)
 
-    for agg in [['card1'], ['card1', 'subcard_categorical']]:
+    for agg in [['card1'], ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_20'],
+            ['card1', 'subcard_categorical', 'id_19'],
+            ['card1', 'subcard_categorical', 'id_31'],
+            ['card1', 'subcard_categorical', 'card4']]:
 
         col_name = '_'.join(agg)
 
