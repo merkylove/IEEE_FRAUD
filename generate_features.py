@@ -105,12 +105,17 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
             ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'addr2'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
             ['card1', 'subcard_categorical', 'id_31'],
             ['card1', 'subcard_categorical', 'card4'],
-            ['card1', 'subcard_categorical', 'ProductCD', 'addr1'],
+            ['card1', 'subcard_categorical', 'card3'],
+            ['card1', 'subcard_categorical', 'card5'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_19', 'DeviceType', 'id_15'],
+            ['card1', 'subcard_categorical', 'id_19', 'id_15', 'R_emaildomain'],
+            ['card1', 'subcard_categorical', 'id_15', 'id_38', 'id_13'],
         ] + [['card1', f'C{i}'] for i in range(1, 15)],
         with_typical_for_user=True
     )
@@ -169,15 +174,20 @@ def generate_features_time_series(train, test, bounds=(12, 13, 14, 15, 16, 17)):
                     ['TransactionDT_weekOfMonth'],
                     # derived
                     ['card1', 'subcard_categorical'],
-                    ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
             ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'addr2'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
             ['card1', 'subcard_categorical', 'id_31'],
-            ['card1', 'subcard_categorical', 'card4']
+            ['card1', 'subcard_categorical', 'card4'],
+            ['card1', 'subcard_categorical', 'card3'],
+            ['card1', 'subcard_categorical', 'card5'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_19', 'DeviceType', 'id_15'],
+            ['card1', 'subcard_categorical', 'id_19', 'id_15', 'R_emaildomain'],
+            ['card1', 'subcard_categorical', 'id_15', 'id_38', 'id_13']
                 ],
                 ['mean', 'std', np.nanmedian],
                 10

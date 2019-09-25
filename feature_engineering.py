@@ -199,7 +199,6 @@ def emaildomain_features(df):
     return df
 
 
-
 def base_transaction_delta_features(
         df,
         column_aggs=[
@@ -210,11 +209,17 @@ def base_transaction_delta_features(
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
             ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'addr2'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
             ['card1', 'subcard_categorical', 'id_31'],
-            ['card1', 'subcard_categorical', 'card4']
+            ['card1', 'subcard_categorical', 'card4'],
+            ['card1', 'subcard_categorical', 'card3'],
+            ['card1', 'subcard_categorical', 'card5'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_19', 'DeviceType', 'id_15'],
+            ['card1', 'subcard_categorical', 'id_19', 'id_15', 'R_emaildomain'],
+            ['card1', 'subcard_categorical', 'id_15', 'id_38', 'id_13']
         ]
 ):
 
@@ -266,11 +271,17 @@ def add_datetime_features(df):
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
             ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'addr2'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
             ['card1', 'subcard_categorical', 'id_31'],
-            ['card1', 'subcard_categorical', 'card4']]:
+            ['card1', 'subcard_categorical', 'card4'],
+            ['card1', 'subcard_categorical', 'card3'],
+            ['card1', 'subcard_categorical', 'card5'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_19', 'DeviceType', 'id_15'],
+            ['card1', 'subcard_categorical', 'id_19', 'id_15', 'R_emaildomain'],
+            ['card1', 'subcard_categorical', 'id_15', 'id_38', 'id_13']]:
 
         col_name = '_'.join(agg)
 
