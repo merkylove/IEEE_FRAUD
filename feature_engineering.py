@@ -170,11 +170,29 @@ def extract_registration_date(df):
         .dt\
         .date\
         .astype(str)
+    
+    df['card_registered_delta_tmp'] = pd.to_timedelta(df['D4'], unit='day')
+    df['subcard_reg_date'] = (
+            df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp']
+    )
+    df['subcard_reg_timestamp'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .apply(
+        lambda x: (
+                x - datetime.date(1970, 1, 1)
+        ).total_seconds()
+    )
+    df['subcard_categorical_D4'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .astype(str)
 
     df.drop(
         labels=[
             'card_registered_delta_tmp',
-            'subcard_reg_date'
+            'subcard_reg_date',
+            'subcard_reg_timestamp'
         ],
         axis=1,
         inplace=True
