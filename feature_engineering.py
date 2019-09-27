@@ -253,7 +253,21 @@ def base_transaction_delta_features(
     return df
 
 
-def add_datetime_features(df):
+def add_datetime_features(df, 
+                          agg_for_transactions=[['card1'], ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'subcard_categorical_D4'],
+            ['card1', 'subcard_categorical', 'DeviceInfo'],
+            ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'P_emaildomain', 'subcard_categorical_D4'],
+            ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'ProductCD', 'subcard_categorical_D4'],
+            ['card1', 'subcard_categorical', 'addr1'],
+            ['card1', 'subcard_categorical', 'id_20'],
+            ['card1', 'subcard_categorical', 'id_19'],
+            ['card1', 'subcard_categorical', 'id_31'],
+            ['card1', 'subcard_categorical', 'card4']],
+                          agg_for_rolling=[['card1'], ['card1', 'subcard_categorical']]
+                         ):
 
     tr_dt = 'TransactionDT'
 
@@ -282,19 +296,10 @@ def add_datetime_features(df):
         .astype('datetime64')\
         .isin(us_holidays)\
         .astype(np.int8)
+    
+    df['is_first_transaction_ever'] = (df['D1'] == 0) & (df['D2'].isnull())
 
-    for agg in [['card1'], ['card1', 'subcard_categorical'],
-            ['card1', 'subcard_categorical', 'subcard_categorical_D4'],
-            ['card1', 'subcard_categorical', 'DeviceInfo'],
-            ['card1', 'subcard_categorical', 'P_emaildomain'],
-            ['card1', 'subcard_categorical', 'P_emaildomain', 'subcard_categorical_D4'],
-            ['card1', 'subcard_categorical', 'ProductCD'],
-            ['card1', 'subcard_categorical', 'ProductCD', 'subcard_categorical_D4'],
-            ['card1', 'subcard_categorical', 'addr1'],
-            ['card1', 'subcard_categorical', 'id_20'],
-            ['card1', 'subcard_categorical', 'id_19'],
-            ['card1', 'subcard_categorical', 'id_31'],
-            ['card1', 'subcard_categorical', 'card4']]:
+    for agg in agg_for_transactions:
 
         col_name = '_'.join(agg)
 
@@ -323,47 +328,49 @@ def add_datetime_features(df):
 
     df.reset_index(inplace=True)
     df.set_index('TransactionDT_to_datetime', inplace=True)
+    
+    for agg in agg_for_rolling:
+        for interval in ['1min', '10min', '7d']:
+            col_name = '_'.join(agg)
+            df[f'TransactionAmt_count_within_{interval}_{col_name}'] = df\
+                .groupby(agg)['TransactionAmt']\
+                .rolling(interval)\
+                .count()\
+                .reset_index()\
+                .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+                .values
 
-    for interval in ['1min', '10min', '7d']:
-        df[f'TransactionAmt_count_within_{interval}'] = df\
-            .groupby('card1')['TransactionAmt']\
-            .rolling(interval)\
-            .count()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
+            df[f'TransactionAmt_sum_within_{interval}_{col_name}'] = df \
+                .groupby(agg)['TransactionAmt'] \
+                .rolling(interval) \
+                .sum()\
+                .reset_index()\
+                .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+                .values
 
-        df[f'TransactionAmt_sum_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .sum()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
+            df[f'TransactionAmt_mean_within_{interval}_{col_name}'] = df \
+                .groupby(agg)['TransactionAmt'] \
+                .rolling(interval) \
+                .mean()\
+                .reset_index()\
+                .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+                .values
 
-        df[f'TransactionAmt_mean_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .mean()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
+            df[f'TransactionAmt_std_within_{interval}_{col_name}'] = df \
+                .groupby(agg)['TransactionAmt'] \
+                .rolling(interval) \
+                .std()\
+                .reset_index()\
+                .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
+                .values
 
-        df[f'TransactionAmt_std_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .std()\
-            .reset_index()\
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt']\
-            .values
-
-        df[f'TransactionAmt_unique_within_{interval}'] = df \
-            .groupby('card1')['TransactionAmt'] \
-            .rolling(interval) \
-            .apply(lambda x: len(np.unique(x))) \
-            .reset_index() \
-            .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
-            .values
+            df[f'TransactionAmt_unique_within_{interval}_{col_name}'] = df \
+                .groupby(agg)['TransactionAmt'] \
+                .rolling(interval) \
+                .apply(lambda x: len(np.unique(x))) \
+                .reset_index() \
+                .sort_values('TransactionDT_to_datetime')['TransactionAmt'] \
+                .values
 
     # df['Transaction_Number'] = df.groupby('card1').cumcount() + 1
     # df['Transaction_Number_normed'] = df['Transaction_Number'] / df\
