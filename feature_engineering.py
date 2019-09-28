@@ -170,11 +170,28 @@ def extract_registration_date(df):
         .dt\
         .date\
         .astype(str)
+    
+    df['card_registered_delta_tmp'] = pd.to_timedelta(df['D4'], unit='day')
+    df['subcard_reg_date'] = (
+            df['TransactionDT_to_datetime'] - df['card_registered_delta_tmp']
+    )
+    df['subcard_reg_timestamp_D4'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .apply(
+        lambda x: (
+                x - datetime.date(1970, 1, 1)
+        ).total_seconds()
+    )
+    df['subcard_categorical_D4'] = df['subcard_reg_date']\
+        .dt\
+        .date\
+        .astype(str)
 
     df.drop(
         labels=[
             'card_registered_delta_tmp',
-            'subcard_reg_date'
+            'subcard_reg_date',
         ],
         axis=1,
         inplace=True
@@ -207,9 +224,12 @@ def base_transaction_delta_features(
             ['card1', 'ProductCD'],
             ['card1', 'ProductCD', 'addr1'],
             ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'P_emaildomain', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'ProductCD', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'addr1'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
@@ -262,10 +282,14 @@ def add_datetime_features(df):
         .isin(us_holidays)\
         .astype(np.int8)
 
-    for agg in [['card1'], ['card1', 'subcard_categorical'],
+    for agg in [['card1'], 
+            ['card1', 'subcard_categorical'],
+            ['card1', 'subcard_categorical', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'DeviceInfo'],
             ['card1', 'subcard_categorical', 'P_emaildomain'],
+            ['card1', 'subcard_categorical', 'P_emaildomain', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'ProductCD'],
+            ['card1', 'subcard_categorical', 'ProductCD', 'subcard_categorical_D4'],
             ['card1', 'subcard_categorical', 'addr1'],
             ['card1', 'subcard_categorical', 'id_20'],
             ['card1', 'subcard_categorical', 'id_19'],
